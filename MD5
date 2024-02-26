@@ -1,0 +1,11 @@
+9de41541a63cbc313ae8bb752e434439 *DESCRIPTION
+9ae15c16b356d8364d85a4f79ffb3126 *NAMESPACE
+0bf106ed2b9f35ca84434a55ccd584e8 *R/comet.R
+2ffb18f8f991626822b24ad3a443ae4d *R/gcm.R
+980374f3d947997fe254bc16acc8fca8 *R/pcm.R
+760c2596ef9ee09b89ce7c79cc834edf *build/partial.rdb
+9a1f1d693df11481c18f3a6f4b92ac49 *man/comet.Rd
+aa347e226305183bb80c161f248657b2 *man/gcm.Rd
+872825ee576e03a8055e01c6f1bdcf41 *man/pcm.Rd
+731e0bc170794682d727200f9b77ba2e *tests/testthat.R
+17d510e0bb3e9c15d17c43c30e63147f *tests/testthat/test_main.R
