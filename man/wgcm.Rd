@@ -15,8 +15,9 @@ wgcm(
   args_wfun = NULL,
   frac = 0.5,
   B = 499L,
-  coin = FALSE,
+  coin = TRUE,
   cointrol = NULL,
+  return_fitted_models = FALSE,
   ...
 )
 }
@@ -38,7 +39,7 @@ X on Z. See \code{?\link[comets]{regressions}} for more detail.}
 estimating the weighting function.
 See \code{?\link[comets]{regressions}} for more detail.}
 
-\item{args_XonZ}{Additional arguments passed to \code{reg_XonZ}.}
+\item{args_XonZ}{A list of named arguments passed to \code{reg_XonZ}.}
 
 \item{args_wfun}{Additional arguments passed to \code{reg_XonZ}.}
 
@@ -50,10 +51,13 @@ used.}
 \item{coin}{Logical; whether or not to use the \code{coin} package for
 computing the test statistic and p-value. The \code{coin} package
 computes variances with n - 1 degrees of freedom.
-The default is \code{FALSE}.}
+The default is \code{TRUE}.}
 
 \item{cointrol}{List; further arguments passed to
 \code{\link[coin]{independence_test}}.}
+
+\item{return_fitted_models}{Logical; whether to return the fitted regressions
+(default is \code{FALSE}).}
 
 \item{...}{Additional arguments passed to \code{reg_YonZ}.}
 }
@@ -70,6 +74,8 @@ components:
 \item{\code{data.name}}{A character string giving the name(s) of the data.}
 \item{\code{rY}}{Residuals for the Y on Z regression.}
 \item{\code{rX}}{Weighted residuals for the X on Z regression.}
+\item{\code{W}}{Estimated weights.}
+\item{\code{models}}{List of fitted regressions if \code{return_fitted_models} is \code{TRUE}.}
 }
 \description{
 Weighted Generalised covariance measure test
@@ -79,7 +85,7 @@ The weighted generalised covariance measure test tests whether a weighted
 version of the conditional covariance of Y and X given Z is zero.
 }
 \examples{
-n <- 150
+n <- 100
 X <- matrix(rnorm(2 * n), ncol = 2)
 colnames(X) <- c("X1", "X2")
 Z <- matrix(rnorm(2 * n), ncol = 2)

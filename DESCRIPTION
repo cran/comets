@@ -1,7 +1,7 @@
 Package: comets
 Type: Package
 Title: Covariance Measure Tests for Conditional Independence
-Version: 0.0-2
+Version: 0.0-3
 Authors@R: c(person("Lucas", "Kook", email = "lucasheinrich.kook@gmail.com",
     role = c("aut", "cre")), person("Anton Rask", "Lundborg", role = "ctb"))
 Description: Covariance measure tests for conditional independence testing 
@@ -10,7 +10,7 @@ Description: Covariance measure tests for conditional independence testing
     (Shah and Peters, 2020, <doi:10.1214/19-aos1857>) and projected covariance 
     measure test (Lundborg et al., 2023, <doi:10.48550/arXiv.2211.02039>). 
     Applications can be found in 
-    Kook and Lundborg (2024, <doi:10.48550/arXiv.2402.14416>).
+    Kook and Lundborg (2024, <doi:10.1093/bib/bbae475>).
 Imports: ranger, glmnet, Formula, survival, coin
 License: GPL-3
 Encoding: UTF-8
@@ -20,9 +20,9 @@ Config/testthat/edition: 3
 URL: https://github.com/LucasKook/comets
 BugReports: https://github.com/LucasKook/comets/issues
 NeedsCompilation: no
-Packaged: 2024-07-05 13:46:01 UTC; lkook
+Packaged: 2024-09-20 06:52:38 UTC; lkook
 Author: Lucas Kook [aut, cre],
   Anton Rask Lundborg [ctb]
 Maintainer: Lucas Kook <lucasheinrich.kook@gmail.com>
 Repository: CRAN
-Date/Publication: 2024-07-05 14:10:02 UTC
+Date/Publication: 2024-09-20 12:00:02 UTC

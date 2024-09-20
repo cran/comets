@@ -32,12 +32,20 @@
 #'     for the estimated transformation of Y, X, and Z on Z, default is
 #'     \code{"rf"} for random forest.
 #'     See \code{?\link[comets]{regressions}} for more detail.
-#' @param args_YonXZ Arguments passed to \code{reg_YonXZ}.
-#' @param args_YonZ Arguments passed to \code{reg_YonZ}.
-#' @param args_YhatonZ Arguments passed to \code{reg_YhatonZ}.
-#' @param args_VonXZ Arguments passed to \code{reg_VonXZ}.
-#' @param args_RonZ Arguments passed to \code{reg_RonZ}.
+#' @param args_YonXZ A list of named arguments passed to \code{reg_YonXZ}.
+#' @param args_YonZ A list of named arguments passed to \code{reg_YonZ}.
+#' @param args_YhatonZ A list of named arguments passed to \code{reg_YhatonZ}.
+#' @param args_VonXZ A list of named arguments passed to \code{reg_VonXZ}.
+#' @param args_RonZ A list of named arguments passed to \code{reg_RonZ}.
 #' @param frac Relative size of train split.
+#' @param indices A numeric vector of indices specifying the observations used
+#'     for estimating the estimating the direction (the other observations will
+#'     be used for computing the final test statistic). Default is \code{NULL}
+#'     and the indices will be generated randomly using \code{frac}.
+#'     When using \code{rep} larger than 1, a list (of length \code{rep}) of
+#'     indices can be supplied.
+#' @param return_fitted_models Logical; whether to return the fitted regressions
+#'     (default is \code{FALSE}).
 #' @param ... Additional arguments currently ignored.
 #'
 #' @importFrom ranger ranger
@@ -54,11 +62,12 @@
 #' \item{\code{method}}{The string \code{"Projected covariance measure test"}.}
 #' \item{\code{data.name}}{A character string giving the name(s) of the data.}
 #' \item{\code{check.data}}{A \code{data.frame} containing the residuals for plotting.}
+#' \item{\code{models}}{List of fitted regressions if \code{return_fitted_models} is \code{TRUE}.}
 #'
 #' @export
 #'
 #' @examples
-#' n <- 150
+#' n <- 1e2
 #' X <- matrix(rnorm(2 * n), ncol = 2)
 #' colnames(X) <- c("X1", "X2")
 #' Z <- matrix(rnorm(2 * n), ncol = 2)
@@ -66,25 +75,31 @@
 #' Y <- X[, 2]^2 + Z[, 2] + rnorm(n)
 #' (pcm1 <- pcm(Y, X, Z))
 #'
-pcm <- function(Y, X, Z, rep = 1, est_vhat = TRUE, reg_YonXZ = "rf",
-                reg_YonZ = "rf", reg_YhatonZ = "rf", reg_VonXZ = "rf",
-                reg_RonZ = "rf", args_YonXZ = NULL, args_YonZ = NULL,
-                args_YhatonZ = list(mtry = identity),
-                args_VonXZ = list(mtry = identity),
-                args_RonZ = list(mtry = identity),
-                frac = 0.5, coin = FALSE, cointrol = NULL, ...) {
+pcm <- function(
+    Y, X, Z, rep = 1, est_vhat = TRUE, reg_YonXZ = "rf",
+    reg_YonZ = "rf", reg_YhatonZ = "rf", reg_VonXZ = "rf",
+    reg_RonZ = "rf", args_YonXZ = NULL, args_YonZ = NULL,
+    args_YhatonZ = list(mtry = identity),
+    args_VonXZ = list(mtry = identity),
+    args_RonZ = list(mtry = identity),
+    frac = 0.5, indices = NULL,
+    coin = FALSE, cointrol = NULL,
+    return_fitted_models = FALSE,
+    ...
+) {
+  call <- match.call()
+  ### Data checks
   Y <- .check_data(Y, "Y", "pcm")
   X <- .check_data(X, "X", "pcm")
   Z <- .check_data(Z, "Z", "pcm")
+  ### Multiple splits
   if (rep != 1) {
+    if (!is.null(indices) && length(indices) != rep)
+      stop("Please supply a list of indices of length `rep`.")
     pcms <- lapply(seq_len(rep), \(iter) {
-      pcm(Y = Y, X = X, Z = Z, rep = 1, est_vhat = est_vhat,
-          reg_YonXZ = reg_YonXZ, reg_YonZ = reg_YonZ,
-          reg_YhatonZ = reg_YhatonZ, reg_VonXZ = reg_VonXZ,
-          reg_RonZ = reg_RonZ, args_YonXZ = args_YonXZ,
-          args_YonZ = args_YonZ, args_YhatonZ = args_YhatonZ,
-          args_VonXZ = args_VonXZ, args_RonZ = args_RonZ,
-          ... = ...)
+      call$rep <- 1
+      call$indices <- indices[iter]
+      eval(call)
     })
     stat <- mean(unlist(lapply(pcms, \(tst) tst$statistic)))
     pval <- pnorm(stat, lower.tail = FALSE)
@@ -93,7 +108,7 @@ pcm <- function(Y, X, Z, rep = 1, est_vhat = TRUE, reg_YonXZ = "rf",
     }))
   } else {
     ### Sample splitting
-    dsp <- .split_sample(Y, X, Z, frac = frac)
+    dsp <- .split_sample(Y, X, Z, frac = frac, indices = indices)
     Ytr <- dsp$Ytr
     Xtr <- dsp$Xtr
     Ztr <- dsp$Ztr
@@ -119,8 +134,10 @@ pcm <- function(Y, X, Z, rep = 1, est_vhat = TRUE, reg_YonXZ = "rf",
       chat <- if (a(0) < 1) 0 else stats::uniroot(\(c) a(c) - 1, c(0, 10), extendInt = "yes")$root
       vhat <- \(X, Z) pmax(predict(vtilde, data = cbind(X, Z)), 0) + chat
     }
-    else
+    else {
+      vtilde <- NULL
       vhat <- \(X, Z) 1
+    }
 
     ### Obtain residuals for test
     fhat <- \(X, Z) hhat(X, Z) / vhat(X, Z)
@@ -144,10 +161,16 @@ pcm <- function(Y, X, Z, rep = 1, est_vhat = TRUE, reg_YonXZ = "rf",
       pval <- pnorm(stat, lower.tail = FALSE)
     }
 
-
     dcheck <- data.frame(id = setdiff(seq_len(NROW(Y)), idx),
                          rY = rY, rT = rT, iter = 1)
   }
+
+  models <- if (return_fitted_models && rep == 1) {
+    list(reg_YonXZ = ghat, reg_YhatonZ = mtilde, reg_VonXZ = vtilde,
+         reg_RonZ = mhatfhat, reg_YonZ = mhat)
+  } else if (return_fitted_models && rep > 1){
+    lapply(pcms, \(x) x[["models"]])
+  } else NULL
 
   structure(list(
     statistic = c("Z" = stat), p.value = pval,
@@ -155,13 +178,15 @@ pcm <- function(Y, X, Z, rep = 1, est_vhat = TRUE, reg_YonXZ = "rf",
     null.value = c("E[Y | X, Z]" = "E[Y | Z]"), alternative = "two.sided",
     method = paste0("Projected covariance measure test"),
     data.name = deparse(match.call(), width.cutoff = 80),
-    check.data = dcheck, rep = rep), class = c("pcm", "htest"))
+    check.data = dcheck, rep = rep, models = models), class = c("pcm", "htest"))
 }
 
 # Helpers -----------------------------------------------------------------
 
-.split_sample <- function(Y, X, Z, frac = 0.5) {
-  idx <- sample.int(NROW(Y), ceiling(frac * NROW(Y)))
+.split_sample <- function(Y, X, Z, frac = 0.5, indices = NULL) {
+  idx <- indices
+  if (is.null(idx))
+    idx <- sample.int(NROW(Y), ceiling(frac * NROW(Y)))
   ### Split 1
   Ytr <- Y[idx]
   Xtr <- as.matrix(data.frame(X)[idx, , drop = FALSE])
@@ -175,8 +200,9 @@ pcm <- function(Y, X, Z, rep = 1, est_vhat = TRUE, reg_YonXZ = "rf",
 
 # Diagnostics -------------------------------------------------------------
 
+#' @rdname plot.comet
 #' @exportS3Method plot pcm
-plot.pcm <- function(x, ...) {
+plot.pcm <- function(x, plot = TRUE, ...) {
   .data <- NULL
   test <- x$check.data
   if (requireNamespace("ggplot2") && requireNamespace("tidyr")) {
@@ -189,7 +215,7 @@ plot.pcm <- function(x, ...) {
     }
     p2 <- mpl("rT", "rY", test) +
       ggplot2::labs(x = "Residuals f(X, Z) | Z", y = "Residuals Y | Z")
-    print(p2)
+    if (plot) print(p2)
   }
   return(invisible(p2))
 }

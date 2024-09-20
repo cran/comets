@@ -21,8 +21,10 @@ pcm(
   args_VonXZ = list(mtry = identity),
   args_RonZ = list(mtry = identity),
   frac = 0.5,
+  indices = NULL,
   coin = FALSE,
   cointrol = NULL,
+  return_fitted_models = FALSE,
   ...
 )
 }
@@ -61,25 +63,35 @@ for the estimated transformation of Y, X, and Z on Z, default is
 \code{"rf"} for random forest.
 See \code{?\link[comets]{regressions}} for more detail.}
 
-\item{args_YonXZ}{Arguments passed to \code{reg_YonXZ}.}
+\item{args_YonXZ}{A list of named arguments passed to \code{reg_YonXZ}.}
 
-\item{args_YonZ}{Arguments passed to \code{reg_YonZ}.}
+\item{args_YonZ}{A list of named arguments passed to \code{reg_YonZ}.}
 
-\item{args_YhatonZ}{Arguments passed to \code{reg_YhatonZ}.}
+\item{args_YhatonZ}{A list of named arguments passed to \code{reg_YhatonZ}.}
 
-\item{args_VonXZ}{Arguments passed to \code{reg_VonXZ}.}
+\item{args_VonXZ}{A list of named arguments passed to \code{reg_VonXZ}.}
 
-\item{args_RonZ}{Arguments passed to \code{reg_RonZ}.}
+\item{args_RonZ}{A list of named arguments passed to \code{reg_RonZ}.}
 
 \item{frac}{Relative size of train split.}
+
+\item{indices}{A numeric vector of indices specifying the observations used
+for estimating the estimating the direction (the other observations will
+be used for computing the final test statistic). Default is \code{NULL}
+and the indices will be generated randomly using \code{frac}.
+When using \code{rep} larger than 1, a list (of length \code{rep}) of
+indices can be supplied.}
 
 \item{coin}{Logical; whether or not to use the \code{coin} package for
 computing the test statistic and p-value. The \code{coin} package
 computes variances with n - 1 degrees of freedom.
-The default is \code{FALSE}.}
+The default is \code{TRUE}.}
 
 \item{cointrol}{List; further arguments passed to
 \code{\link[coin]{independence_test}}.}
+
+\item{return_fitted_models}{Logical; whether to return the fitted regressions
+(default is \code{FALSE}).}
 
 \item{...}{Additional arguments currently ignored.}
 }
@@ -95,6 +107,7 @@ components:
 \item{\code{method}}{The string \code{"Projected covariance measure test"}.}
 \item{\code{data.name}}{A character string giving the name(s) of the data.}
 \item{\code{check.data}}{A \code{data.frame} containing the residuals for plotting.}
+\item{\code{models}}{List of fitted regressions if \code{return_fitted_models} is \code{TRUE}.}
 }
 \description{
 Projected covariance measure test for conditional mean independence
@@ -104,7 +117,7 @@ The projected covariance measure test tests whether the conditional
 mean of Y given X and Z is independent of X.
 }
 \examples{
-n <- 150
+n <- 1e2
 X <- matrix(rnorm(2 * n), ncol = 2)
 colnames(X) <- c("X1", "X2")
 Z <- matrix(rnorm(2 * n), ncol = 2)
