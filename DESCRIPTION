@@ -1,7 +1,7 @@
 Package: comets
 Type: Package
 Title: Covariance Measure Tests for Conditional Independence
-Version: 0.0-3
+Version: 0.1-0
 Authors@R: c(person("Lucas", "Kook", email = "lucasheinrich.kook@gmail.com",
     role = c("aut", "cre")), person("Anton Rask", "Lundborg", role = "ctb"))
 Description: Covariance measure tests for conditional independence testing 
@@ -20,9 +20,9 @@ Config/testthat/edition: 3
 URL: https://github.com/LucasKook/comets
 BugReports: https://github.com/LucasKook/comets/issues
 NeedsCompilation: no
-Packaged: 2024-09-20 06:52:38 UTC; lkook
+Packaged: 2024-12-06 08:56:47 UTC; lkook
 Author: Lucas Kook [aut, cre],
   Anton Rask Lundborg [ctb]
 Maintainer: Lucas Kook <lucasheinrich.kook@gmail.com>
 Repository: CRAN
-Date/Publication: 2024-09-20 12:00:02 UTC
+Date/Publication: 2024-12-06 09:10:02 UTC
