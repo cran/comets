@@ -34,6 +34,10 @@
 #'     The default is \code{TRUE}.
 #' @param cointrol List; further arguments passed to
 #'     \code{\link[coin]{independence_test}}.
+#' @param multivariate Character; specifying which regression can handle
+#'     multivariate outcomes (\code{"none"}, \code{"YonZ"}, \code{"XonZ"}, or
+#'     \code{"both"}). If \code{"none"}, then the regression is run using each
+#'     column in Y (or X) as the response.
 #' @param ... Additional arguments passed to \code{reg_YonZ}.
 #' @param return_fitted_models Logical; whether to return the fitted regressions
 #'     (default is \code{FALSE}).
@@ -68,23 +72,26 @@ gcm <- function(
     reg_YonZ = "rf", reg_XonZ = "rf", args_YonZ = NULL,
     args_XonZ = NULL, type = c("quadratic", "max", "scalar"), B = 499L,
     coin = TRUE, cointrol = list(distribution = "asymptotic"),
-    return_fitted_models = FALSE, ...) {
+    return_fitted_models = FALSE, multivariate = c("none", "YonZ", "XonZ", "both"), ...) {
   Y <- .check_data(Y, "Y")
   X <- .check_data(X, "X")
   Z <- .check_data(Z, "Z")
   alternative <- match.arg(alternative)
+  multivariate <- match.arg(multivariate)
+  mvYonZ <- multivariate %in% c("YonZ", "both")
+  mvXonZ <- multivariate %in% c("XonZ", "both")
   type <- match.arg(type)
   args <- if (length(list(...)) > 0) list(...) else NULL
   args <- c(args_YonZ, args)
   if ("matrix" %in% class(Y)) {
-    YZ <- .multi_regression(Y, Z, reg_YonZ, args, return_fitted_models)
+    YZ <- .multi_regression(Y, Z, reg_YonZ, args, return_fitted_models, mvYonZ)
     rY <- YZ[["residuals"]]
     mY <- YZ[["models"]]
   } else {
     mY <- do.call(reg_YonZ, c(list(y = Y, x = Z), args))
     rY <- stats::residuals(mY, response = Y, data = Z)
   }
-  XZ <- .multi_regression(X, Z, reg_XonZ, args_XonZ, return_fitted_models)
+  XZ <- .multi_regression(X, Z, reg_XonZ, args_XonZ, return_fitted_models, mvXonZ)
   rX <- XZ[["residuals"]]
   mX <- XZ[["models"]]
 
@@ -132,18 +139,23 @@ gcm <- function(
 
 # Helpers -----------------------------------------------------------------
 
-.multi_regression <- function(Y, X, reg, args, rfm) {
-  res <- apply(Y, 2, \(tY) {
-    m <- do.call(reg, c(list(y = tY, x = X), args))
-    r <- stats::residuals(m, response = tY, data = X)
-    if (rfm) list(m = m, r = r) else r
-  }, simplify = FALSE)
-  if (rfm) {
-    r <- do.call("cbind", lapply(res, \(x) x[["r"]]))
-    m <- lapply(res, \(x) x[["m"]])
+.multi_regression <- function(Y, X, reg, args, rfm, mv) {
+  if (mv) {
+    m <- do.call(reg, c(list(y = Y, x = X), args))
+    r <- stats::residuals(m, response = Y, data = X)
   } else {
-    r <- do.call("cbind", res)
-    m <- NULL
+    res <- apply(Y, 2, \(tY) {
+      m <- do.call(reg, c(list(y = tY, x = X), args))
+      r <- stats::residuals(m, response = tY, data = X)
+      if (rfm) list(m = m, r = r) else r
+    }, simplify = FALSE)
+    if (rfm) {
+      r <- do.call("cbind", lapply(res, \(x) x[["r"]]))
+      m <- lapply(res, \(x) x[["m"]])
+    } else {
+      r <- do.call("cbind", res)
+      m <- NULL
+    }
   }
   return(list(models = m, residuals = r))
 }
@@ -257,20 +269,20 @@ gcm <- function(
 #'
 #' @exportS3Method plot gcm
 plot.gcm <- function(x, plot = TRUE, ...) {
-  .data <- NULL
-  pd <- tidyr::pivot_longer(data.frame(rY = unname(x$rY), rX = unname(x$rX)),
-    dplyr::starts_with("rX"),
-    names_to = "nX",
-    values_to = "rX"
-  )
-  if (NCOL(x$rY > 1)) {
-    pd <- tidyr::pivot_longer(pd, dplyr::starts_with("rY"),
-      names_to = "nY", values_to = "rY"
+  if (requireNamespace("ggplot2") & requireNamespace("tidyr") & requireNamespace("dplyr")) {
+    .data <- NULL
+    pd <- tidyr::pivot_longer(data.frame(rY = unname(x$rY), rX = unname(x$rX)),
+      dplyr::starts_with("rX"),
+      names_to = "nX",
+      values_to = "rX"
     )
-  } else {
-    pd$nY <- "rY.1"
-  }
-  if (requireNamespace("ggplot2")) {
+    if (NCOL(x$rY > 1)) {
+      pd <- tidyr::pivot_longer(pd, dplyr::starts_with("rY"),
+        names_to = "nY", values_to = "rY"
+      )
+    } else {
+      pd$nY <- "rY.1"
+    }
     p1 <- ggplot2::ggplot(pd, ggplot2::aes(
       x = .data[["rX"]], y = .data[["rY"]],
       color = interaction(.data[["nY"]], .data[["nX"]]),
@@ -281,8 +293,9 @@ plot.gcm <- function(x, plot = TRUE, ...) {
       ggplot2::theme_bw() +
       ggplot2::labs(x = "Residuals X | Z", y = "Residuals Y | Z")
     if (plot) print(p1)
+    return(invisible(p1))
   }
-  return(invisible(p1))
+  stop("Package `ggplot2` not available.")
 }
 
 .mm <- function(preds, data) {
